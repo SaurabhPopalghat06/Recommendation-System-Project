@@ -1,0 +1,9 @@
+# Generated files — do NOT push to GitHub
+data/
+model/
+__pycache__/
+*.pkl
+*.zip
+*.pyc
+.env
+.DS_Store
