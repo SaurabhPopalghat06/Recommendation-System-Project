@@ -7,65 +7,105 @@ import sys
 from pathlib import Path
 
 # ══════════════════════════════════════════════════════════════════════════════
-# AUTO-SETUP  (runs once on Streamlit Cloud cold start)
+# AUTO-SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 DATA_PATH  = Path("data/ml-100k")
 MODEL_PATH = Path("model/hybrid_model.pkl")
 
 def run_setup():
     if not (DATA_PATH / "u.data").exists():
-        with st.spinner("⬇️ Downloading MovieLens 100K dataset (~5 MB)..."):
+        with st.spinner("⬇️ First time setup: downloading dataset (~5 MB)..."):
             r = subprocess.run([sys.executable, "download_data.py"],
                                capture_output=True, text=True)
             if r.returncode != 0:
-                st.error(f"Download failed:\n{r.stderr}")
-                st.stop()
-
+                st.error(f"Download failed:\n{r.stderr}"); st.stop()
     if not MODEL_PATH.exists():
-        with st.spinner("🧠 Training hybrid model — SVD + TF-IDF (~30 sec)..."):
+        with st.spinner("🧠 Training model for the first time (~30 sec)..."):
             r = subprocess.run([sys.executable, "train.py"],
                                capture_output=True, text=True)
             if r.returncode != 0:
-                st.error(f"Training failed:\n{r.stderr}")
-                st.stop()
-        st.success("✅ Setup complete! Loading app...")
-        st.rerun()
+                st.error(f"Training failed:\n{r.stderr}"); st.stop()
+        st.success("✅ Ready!"); st.rerun()
 
 run_setup()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE CONFIG
+# PAGE CONFIG & STYLES
 # ══════════════════════════════════════════════════════════════════════════════
-st.set_page_config(
-    page_title="CineHybrid Recommender",
-    page_icon="🎬",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="CineMatch", page_icon="🎬",
+                   layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
-    .main-header {
-        background: linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
-        padding:2rem; border-radius:12px; margin-bottom:2rem;
-        text-align:center; color:white;
+    /* ── global ── */
+    [data-testid="stAppViewContainer"] { background: #f5f6fa; }
+    [data-testid="stSidebar"] { background: #0f3460 !important; }
+    [data-testid="stSidebar"] * { color: #e0e0e0 !important; }
+    [data-testid="stSidebar"] .stRadio label { font-size: 1rem; padding: 6px 0; }
+    [data-testid="stSidebar"] hr { border-color: #ffffff30; }
+
+    /* ── header ── */
+    .app-header {
+        background: linear-gradient(135deg, #0f3460, #16213e);
+        color: white; padding: 1.6rem 2rem; border-radius: 14px;
+        margin-bottom: 1.8rem;
     }
-    .main-header h1{font-size:2.5rem;margin:0}
-    .main-header p {font-size:1rem;opacity:.8;margin-top:.5rem}
-    .rec-card{
-        background:white; border-radius:10px; padding:1rem;
-        border:1px solid #e0e0e0; margin-bottom:.5rem;
+    .app-header h1 { margin: 0; font-size: 2rem; }
+    .app-header p  { margin: 4px 0 0; opacity: .75; font-size: .95rem; }
+
+    /* ── movie list item ── */
+    .movie-item {
+        background: white; border-radius: 10px; padding: .9rem 1.1rem;
+        margin-bottom: .5rem; border: 1px solid #e8e8e8;
+        display: flex; align-items: center; justify-content: space-between;
     }
-    .score-badge{
-        display:inline-block; padding:2px 10px;
-        border-radius:20px; font-size:.75rem; font-weight:bold;
+    .movie-item-title { font-weight: 600; font-size: .95rem; color: #1a1a2e; }
+    .movie-item-genre { font-size: .8rem; color: #888; margin-top: 2px; }
+
+    /* ── rec card ── */
+    .rec-card {
+        background: white; border-radius: 12px; padding: 1.1rem 1.3rem;
+        margin-bottom: .7rem; border: 1px solid #e8e8e8;
+        border-left: 4px solid #0f3460;
     }
-    .badge-hybrid{background:#e8f4f8;color:#0f3460}
-    .badge-cf    {background:#e8f8e8;color:#1a6b1a}
-    .badge-cb    {background:#f8f0e8;color:#8b4500}
-    .stButton>button{border-radius:8px;font-weight:600}
-    div[data-testid="stSidebarContent"]{background:#1a1a2e}
-    div[data-testid="stSidebarContent"] .stMarkdown p{color:#ccc}
+    .rec-title { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+    .rec-genre { font-size: .8rem; color: #888; margin: 3px 0 8px; }
+    .pct-bar-bg {
+        background: #eef0f7; border-radius: 20px; height: 8px; overflow: hidden;
+    }
+    .pct-bar-fill {
+        height: 8px; border-radius: 20px;
+        background: linear-gradient(90deg, #0f3460, #4a90d9);
+    }
+    .pct-label {
+        font-size: .85rem; font-weight: 700; color: #0f3460; margin-bottom: 4px;
+    }
+
+    /* ── info box ── */
+    .info-box {
+        background: #e8f0fe; border-radius: 10px; padding: .9rem 1.2rem;
+        border-left: 4px solid #4a90d9; font-size: .9rem; color: #1a1a2e;
+        margin-bottom: 1rem;
+    }
+    .warn-box {
+        background: #fff8e1; border-radius: 10px; padding: .9rem 1.2rem;
+        border-left: 4px solid #f9a825; font-size: .9rem; color: #5d4037;
+        margin-bottom: 1rem;
+    }
+
+    /* ── stat pill ── */
+    .stat-pill {
+        display: inline-block; background: #0f3460; color: white;
+        border-radius: 20px; padding: 3px 14px; font-size: .8rem;
+        font-weight: 600; margin: 3px 3px 0 0;
+    }
+
+    /* ── buttons ── */
+    .stButton > button {
+        border-radius: 8px; font-weight: 600; font-size: .95rem;
+    }
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stSlider"] label { font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,79 +114,65 @@ st.markdown("""
 # ══════════════════════════════════════════════════════════════════════════════
 @st.cache_resource
 def load_model():
-    if not MODEL_PATH.exists():
-        return None
-    with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)
+    if not MODEL_PATH.exists(): return None
+    with open(MODEL_PATH, "rb") as f: return pickle.load(f)
 
 @st.cache_data
-def load_data():
-    if not (DATA_PATH / "u.data").exists():
-        return None, None, None
-    ratings = pd.read_csv(DATA_PATH/"u.data", sep="\t",
-                          names=["user_id","movie_id","rating","timestamp"])
-    mcols   = ["movie_id","title","release_date","video_date","url"] + [f"g{i}" for i in range(19)]
-    movies  = pd.read_csv(DATA_PATH/"u.item", sep="|", names=mcols, encoding="latin-1")
-    GENRES  = ["unknown","Action","Adventure","Animation","Children's","Comedy",
-               "Crime","Documentary","Drama","Fantasy","Film-Noir","Horror",
-               "Musical","Mystery","Romance","Sci-Fi","Thriller","War","Western"]
+def load_movies():
+    if not (DATA_PATH / "u.item").exists(): return None, []
+    mcols  = ["movie_id","title","release_date","video_date","url"] + [f"g{i}" for i in range(19)]
+    movies = pd.read_csv(DATA_PATH/"u.item", sep="|", names=mcols, encoding="latin-1")
+    GENRES = ["unknown","Action","Adventure","Animation","Children's","Comedy",
+              "Crime","Documentary","Drama","Fantasy","Film-Noir","Horror",
+              "Musical","Mystery","Romance","Sci-Fi","Thriller","War","Western"]
     movies["genres"] = movies[[f"g{i}" for i in range(19)]].apply(
-        lambda r: "|".join([GENRES[i] for i, v in enumerate(r) if v == 1]), axis=1
+        lambda r: ", ".join([GENRES[i] for i, v in enumerate(r) if v == 1]), axis=1
     )
-    movies["year"] = movies["title"].str.extract(r'\((\d{4})\)').fillna("")
-    return ratings, movies, GENRES
+    movies["year"] = movies["title"].str.extract(r'\((\d{4})\)').fillna("").astype(str)
+    movies["display"] = movies["title"]
+    return movies, GENRES[1:]
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HYBRID RECOMMENDATION ENGINE  (pure sklearn / numpy)
+# RECOMMENDATION ENGINE
 # ══════════════════════════════════════════════════════════════════════════════
 def get_recommendations(model, user_ratings: dict, movies_df, top_n=10):
-    if model is None or not user_ratings:
+    """Returns top_n recommendations with match % for each."""
+    if model is None or len(user_ratings) < 5:
         return pd.DataFrame()
 
-    # ── unpack model ──────────────────────────────────────────────────────────
-    U          = model["U"]            # (n_users, factors)
-    Vt         = model["Vt"]           # (factors, n_movies)
-    movie_ids  = model["movie_ids"]    # CF movie ordering
-    user_means = model["user_means"]   # {user_id: mean_rating}
-    cb_matrix  = model["cb_matrix"]   # (n_cb, n_cb) cosine sim
-    cb_ids     = model["cb_movie_ids"] # CB movie ordering
+    U          = model["U"]
+    Vt         = model["Vt"]
+    movie_ids  = model["movie_ids"]
+    user_means = model["user_means"]
+    cb_matrix  = model["cb_matrix"]
+    cb_ids     = model["cb_movie_ids"]
     cf_weight  = model.get("cf_weight", 0.6)
     cb_weight  = 1.0 - cf_weight
 
-    # ── CF: build a pseudo-user vector from ratings ───────────────────────────
-    # Project the user's known ratings into the SVD latent space
-    global_mean  = float(np.mean(list(user_means.values())))
-    pseudo_mean  = float(np.mean(list(user_ratings.values())))
-    mid_to_cf    = {m: i for i, m in enumerate(movie_ids)}
-    cb_mid_to_i  = {m: i for i, m in enumerate(cb_ids)}
+    pseudo_mean = float(np.mean(list(user_ratings.values())))
+    mid_to_cf   = {m: i for i, m in enumerate(movie_ids)}
+    cb_mid_to_i = {m: i for i, m in enumerate(cb_ids)}
 
-    # Build a centred rating vector for the pseudo-user
-    n_movies   = len(movie_ids)
-    user_vec   = np.zeros(n_movies)
+    # Build pseudo-user vector & project into latent space
+    user_vec = np.zeros(len(movie_ids))
     for mid, r in user_ratings.items():
         if mid in mid_to_cf:
             user_vec[mid_to_cf[mid]] = r - pseudo_mean
 
-    # Project into latent space then reconstruct scores
-    latent        = user_vec @ Vt.T          # (factors,)
-    cf_scores_all = latent @ Vt              # (n_movies,)  centred predictions
-
-    rated_set = set(user_ratings.keys())
-    scores    = {}
+    cf_scores_all = (user_vec @ Vt.T) @ Vt
+    rated_set     = set(user_ratings.keys())
+    scores        = {}
 
     for mid in movie_ids:
         if mid in rated_set:
             continue
-        ci = mid_to_cf[mid]
-
-        # CF score (add back pseudo-user mean + clamp to 1-5)
+        ci       = mid_to_cf[mid]
         cf_score = float(np.clip(cf_scores_all[ci] + pseudo_mean, 1.0, 5.0))
 
-        # CB score: weighted avg similarity to rated movies (weight = normalised rating)
         cb_score = 0.0
         if mid in cb_mid_to_i:
-            cidx       = cb_mid_to_i[mid]
-            sim_vals   = []
+            cidx     = cb_mid_to_i[mid]
+            sim_vals = []
             for rated_id, rating in user_ratings.items():
                 if rated_id in cb_mid_to_i:
                     ridx = cb_mid_to_i[rated_id]
@@ -156,323 +182,353 @@ def get_recommendations(model, user_ratings: dict, movies_df, top_n=10):
                 cb_score = float(np.mean(sim_vals)) * 5.0
 
         hybrid = cf_weight * cf_score + cb_weight * cb_score
-        scores[mid] = {"cf": round(cf_score, 2),
-                       "cb": round(cb_score, 2),
-                       "hybrid": round(hybrid, 2)}
+        scores[mid] = hybrid
 
     if not scores:
         return pd.DataFrame()
 
-    result = (pd.DataFrame(scores).T
-                .reset_index().rename(columns={"index": "movie_id"})
-                .sort_values("hybrid", ascending=False)
-                .head(top_n))
+    top_ids    = sorted(scores, key=scores.get, reverse=True)[:top_n]
+    max_score  = max(scores.values()) if scores else 5.0
+    min_score  = min(scores.values()) if scores else 1.0
+    score_range = max_score - min_score if max_score != min_score else 1.0
+
+    rows = []
+    for mid in top_ids:
+        raw  = scores[mid]
+        pct  = int(((raw - min_score) / score_range) * 55 + 45)   # scale to 45–100%
+        pct  = min(pct, 99)
+        rows.append({"movie_id": mid, "match_pct": pct, "raw": round(raw, 3)})
+
+    result = pd.DataFrame(rows)
     result = result.merge(
         movies_df[["movie_id","title","genres","year"]], on="movie_id", how="left"
     )
     return result
 
 # ══════════════════════════════════════════════════════════════════════════════
-# LOAD
+# INIT SESSION STATE
 # ══════════════════════════════════════════════════════════════════════════════
-model                            = load_model()
-ratings_df, movies_df, GENRES   = load_data()
+if "my_list"  not in st.session_state: st.session_state.my_list  = {}   # {movie_id: rating}
+if "show_recs" not in st.session_state: st.session_state.show_recs = False
+
+model            = load_model()
+movies_df, GENRES = load_movies()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown("## 🎬 CineHybrid")
+    st.markdown("## 🎬 CineMatch")
     st.markdown("---")
-    page = st.radio("Navigate",
-        ["🏠 Home","⭐ Rate & Recommend","🔍 Search & Explore",
-         "📊 Model Metrics","🗺️ Similarity Maps"],
-        label_visibility="collapsed"
-    )
+    page = st.radio("", ["🏠 Home", "📋 My Movie List", "✨ Discover Movies"],
+                    label_visibility="collapsed")
     st.markdown("---")
-    if model:
-        st.success("✅ Model loaded")
-        st.caption(f"Trained: {model.get('trained_on','')[:10]}")
+    n = len(st.session_state.my_list)
+    st.markdown(f"**Movies in your list:** {n}")
+    if n >= 5:
+        st.markdown("✅ Ready to get recommendations!")
     else:
-        st.warning("⚠️ Model not found.")
-    if ratings_df is not None:
-        st.info(f"📦 {len(ratings_df):,} ratings")
-    else:
-        st.error("❌ Dataset missing.")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# HEADER
-# ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<div class="main-header">
-  <h1>🎬 CineHybrid Recommender</h1>
-  <p>Hybrid AI · Collaborative Filtering + Content-Based · MovieLens 100K</p>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown(f"⚠️ Add {5-n} more movie(s) to unlock recommendations.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: HOME
 # ══════════════════════════════════════════════════════════════════════════════
 if page == "🏠 Home":
-    if ratings_df is not None:
-        c1,c2,c3,c4 = st.columns(4)
-        c1.metric("🎬 Movies",     f"{movies_df['movie_id'].nunique():,}")
-        c2.metric("👥 Users",      f"{ratings_df['user_id'].nunique():,}")
-        c3.metric("⭐ Ratings",    f"{len(ratings_df):,}")
-        c4.metric("📊 Avg Rating", f"{ratings_df['rating'].mean():.2f} / 5")
+    st.markdown("""
+    <div class="app-header">
+      <h1>🎬 CineMatch</h1>
+      <p>Smart movie recommendations powered by Hybrid AI</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("### 🧠 How the Hybrid System Works")
-    c1,c2,c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown("""#### 👥 Collaborative Filtering
-Uses **TruncatedSVD** on the user×movie matrix to learn latent preference
-factors. Projects your ratings into this space to predict scores for unseen movies.""")
+        st.markdown("""
+        ### 📋 Step 1 — Build your list
+        Go to **My Movie List**, search for movies you've enjoyed and rate them (1–5 stars).
+        Add **at least 5 movies** to unlock recommendations.
+        """)
     with c2:
-        st.markdown("""#### 🎭 Content-Based Filtering
-Builds a **TF-IDF genre vector** for every movie and computes pairwise
-cosine similarity. Recommends movies genre-similar to your highest-rated ones.""")
+        st.markdown("""
+        ### ✨ Step 2 — Discover
+        Hit **"Suggest Movies I'll Love"** and the AI analyses your taste — 
+        combining what similar users liked with movies that match your genre preferences.
+        """)
     with c3:
-        st.markdown("""#### 🔀 Hybrid Blending
-`score = 0.6 × CF + 0.4 × CB` by default. Adjustable live via slider.
-Solves cold-start — CB kicks in when CF has little signal.""")
+        st.markdown("""
+        ### 🔄 Step 3 — Refine anytime
+        Add more movies, change your ratings, or clear the list and start fresh.
+        Your recommendations update instantly every time.
+        """)
 
-    st.markdown("### 🚀 Local Setup")
-    st.code("""pip install -r requirements.txt
-python download_data.py
-python train.py
-streamlit run app.py""", language="bash")
-    st.info("☁️ **Streamlit Cloud:** first load auto-downloads data and trains the model.")
+    st.markdown("---")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: RATE & RECOMMEND
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "⭐ Rate & Recommend":
-    st.markdown("## ⭐ Rate Movies & Get Recommendations")
-    if movies_df is None:
-        st.error("Dataset not found."); st.stop()
-
-    if "user_ratings" not in st.session_state:
-        st.session_state.user_ratings = {}
-
-    col_l, col_r = st.columns(2)
-
-    with col_l:
-        st.markdown("### 🎬 Rate Movies")
-        gf = st.multiselect("Filter by genre", GENRES[1:], default=["Action","Drama","Comedy"])
-        if gf:
-            mask = movies_df["genres"].apply(lambda g: any(x in g for x in gf))
-            pool = movies_df[mask].sample(min(20, int(mask.sum())), random_state=42)
-        else:
-            pool = movies_df.sample(20, random_state=42)
-
-        for _, row in pool.iterrows():
-            mid = int(row["movie_id"])
-            a, b = st.columns([3,2])
-            with a:
-                st.write(f"**{row['title']}**")
-                st.caption(str(row["genres"])[:40])
-            with b:
-                val = st.session_state.user_ratings.get(mid, 0)
-                r   = st.select_slider("", [0,1,2,3,4,5], value=val,
-                                        key=f"r_{mid}", label_visibility="collapsed")
-                if r > 0:
-                    st.session_state.user_ratings[mid] = r
-                elif mid in st.session_state.user_ratings:
-                    del st.session_state.user_ratings[mid]
-            st.divider()
-
-    with col_r:
-        st.markdown("### 🎯 Your Recommendations")
-        rated = st.session_state.user_ratings
-        st.info(f"You have rated **{len(rated)}** movie(s).")
-
-        if len(rated) < 2:
-            st.warning("Rate at least **2 movies** to get recommendations.")
-        elif model is None:
-            st.error("Model not available.")
-        else:
-            top_n = st.slider("How many recommendations?", 5, 20, 10)
-            cf_w  = st.slider("CF weight  (rest goes to Content-Based)", 0.0, 1.0, 0.6, 0.05)
-            model["cf_weight"] = cf_w
-
-            with st.spinner("Computing hybrid scores..."):
-                recs = get_recommendations(model, rated, movies_df, top_n)
-
-            if recs.empty:
-                st.warning("No recommendations found.")
-            else:
-                for _, row in recs.iterrows():
-                    hp = int(row["hybrid"] / 5 * 100)
-                    cp = int(row["cf"]     / 5 * 100)
-                    bp = int(row["cb"]     / 5 * 100)
-                    st.markdown(f"""
-                    <div class="rec-card">
-                      <b>{row['title']}</b>
-                      <span style="color:#888;font-size:.8rem"> · {str(row.get('genres',''))[:35]}</span><br>
-                      <span class="score-badge badge-hybrid">🔀 Hybrid {hp}%</span>&nbsp;
-                      <span class="score-badge badge-cf">👥 CF {cp}%</span>&nbsp;
-                      <span class="score-badge badge-cb">🎭 CB {bp}%</span>
-                      <div style="background:#eee;border-radius:4px;height:6px;margin-top:6px">
-                        <div style="background:#0f3460;width:{hp}%;height:6px;border-radius:4px"></div>
-                      </div>
-                    </div>""", unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: SEARCH & EXPLORE
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "🔍 Search & Explore":
-    st.markdown("## 🔍 Search & Explore Movies")
-    if movies_df is None:
-        st.error("Dataset not found."); st.stop()
-
-    import plotly.express as px
-
-    query = st.text_input("🔎 Search by title or genre", placeholder="e.g. Star Wars, Comedy...")
+    st.markdown("### 🧠 How the AI works")
     c1, c2 = st.columns(2)
-    with c1: gs  = st.multiselect("Filter by genre", GENRES[1:])
-    with c2: sb  = st.selectbox("Sort by", ["Title A-Z","Year (newest)","Avg Rating","# Ratings"])
+    with c1:
+        st.markdown("""
+        **Collaborative Filtering (SVD)**  
+        Learns hidden patterns from 100,000 ratings by 943 users.
+        Finds what people with similar taste to you enjoyed.
+        """)
+    with c2:
+        st.markdown("""
+        **Content-Based Filtering (TF-IDF)**  
+        Analyses the genres of movies you liked and finds
+        other movies with a matching genre profile.
+        """)
 
-    df = movies_df.copy()
-    if query:
-        df = df[df["title"].str.contains(query, case=False, na=False) |
-                df["genres"].str.contains(query, case=False, na=False)]
-    if gs:
-        df = df[df["genres"].apply(lambda g: any(x in g for x in gs))]
+    st.markdown("""
+    <div class="info-box">
+    💡 The final score is a <b>60% CF + 40% Content</b> blend — giving you the best of both worlds.
+    The <b>match %</b> shown on each recommendation tells you how well it fits your taste profile.
+    </div>
+    """, unsafe_allow_html=True)
 
-    if ratings_df is not None:
-        stats = ratings_df.groupby("movie_id").agg(
-            avg_rating=("rating","mean"), num_ratings=("rating","count")).reset_index()
-        df = df.merge(stats, on="movie_id", how="left")
-        df["avg_rating"]  = df["avg_rating"].fillna(0).round(2)
-        df["num_ratings"] = df["num_ratings"].fillna(0).astype(int)
-
-    if   sb == "Title A-Z":      df = df.sort_values("title")
-    elif sb == "Year (newest)":  df = df.sort_values("year", ascending=False)
-    elif sb == "Avg Rating"   and "avg_rating"  in df: df = df.sort_values("avg_rating",  ascending=False)
-    elif sb == "# Ratings"    and "num_ratings" in df: df = df.sort_values("num_ratings", ascending=False)
-
-    st.markdown(f"**{len(df):,} movies found**")
-    cols = ["title","genres","year"] + (["avg_rating","num_ratings"] if "avg_rating" in df.columns else [])
-    st.dataframe(df[cols].head(100).rename(columns={
-        "title":"Title","genres":"Genres","year":"Year",
-        "avg_rating":"Avg ⭐","num_ratings":"# Ratings"}),
-        use_container_width=True, height=480)
-
-    st.markdown("### 📊 Genre Distribution")
-    gc = {}
-    for g in movies_df["genres"]:
-        for p in str(g).split("|"):
-            if p and p != "unknown": gc[p] = gc.get(p,0)+1
-    gdf = pd.DataFrame(list(gc.items()), columns=["Genre","Count"]).sort_values("Count")
-    fig = px.bar(gdf, x="Count", y="Genre", orientation="h",
-                 color="Count", color_continuous_scale="Blues", title="Movies per Genre")
-    fig.update_layout(height=480, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    if movies_df is not None:
+        st.markdown("---")
+        st.markdown("### 📊 Dataset at a glance")
+        ratings = pd.read_csv(DATA_PATH/"u.data", sep="\t",
+                              names=["user_id","movie_id","rating","timestamp"])
+        c1,c2,c3,c4 = st.columns(4)
+        c1.metric("🎬 Movies",      f"{movies_df['movie_id'].nunique():,}")
+        c2.metric("👥 Users",       f"{ratings['user_id'].nunique():,}")
+        c3.metric("⭐ Total Ratings",f"{len(ratings):,}")
+        c4.metric("📊 Avg Rating",  f"{ratings['rating'].mean():.2f} / 5")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE: MODEL METRICS
+# PAGE: MY MOVIE LIST
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "📊 Model Metrics":
-    st.markdown("## 📊 Model Accuracy & Evaluation")
+elif page == "📋 My Movie List":
+    st.markdown("""
+    <div class="app-header">
+      <h1>📋 My Movie List</h1>
+      <p>Add movies you've watched and rate them — the more you add, the better your recommendations</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if movies_df is None:
+        st.error("Movie data not available."); st.stop()
+
+    # ── Add a movie ───────────────────────────────────────────────────────────
+    st.markdown("### ➕ Add a Movie")
+
+    col_search, col_genre = st.columns([3, 2])
+    with col_search:
+        search_q = st.text_input("Search by title", placeholder="e.g. Toy Story, Batman...",
+                                 label_visibility="collapsed")
+    with col_genre:
+        genre_f = st.selectbox("Filter by genre", ["All genres"] + GENRES,
+                               label_visibility="collapsed")
+
+    # Filter movie pool
+    pool = movies_df.copy()
+    if search_q:
+        pool = pool[pool["title"].str.contains(search_q, case=False, na=False)]
+    if genre_f != "All genres":
+        pool = pool[pool["genres"].str.contains(genre_f, case=False, na=False)]
+
+    already_added = set(st.session_state.my_list.keys())
+    pool = pool[~pool["movie_id"].isin(already_added)]
+
+    col_pick, col_star, col_add = st.columns([4, 2, 1])
+    with col_pick:
+        options = ["— select a movie —"] + pool["title"].head(100).tolist()
+        chosen  = st.selectbox("Movie", options, label_visibility="collapsed")
+    with col_star:
+        stars = st.select_slider("Rating", options=[1,2,3,4,5], value=4,
+                                  label_visibility="collapsed",
+                                  format_func=lambda x: "★"*x + "☆"*(5-x))
+    with col_add:
+        add_clicked = st.button("Add", type="primary", use_container_width=True)
+
+    if add_clicked and chosen != "— select a movie —":
+        row = movies_df[movies_df["title"] == chosen].iloc[0]
+        st.session_state.my_list[int(row["movie_id"])] = stars
+        st.session_state.show_recs = False
+        st.success(f"✅ Added **{chosen}** with {'★'*stars}")
+        st.rerun()
+
+    st.markdown("---")
+
+    # ── Current list ──────────────────────────────────────────────────────────
+    my_list = st.session_state.my_list
+    n = len(my_list)
+
+    col_title, col_action = st.columns([3,1])
+    with col_title:
+        st.markdown(f"### 🎞️ Your List &nbsp; <span class='stat-pill'>{n} movies</span>", unsafe_allow_html=True)
+    with col_action:
+        if n > 0:
+            if st.button("🗑️ Clear entire list", use_container_width=True):
+                st.session_state.my_list = {}
+                st.session_state.show_recs = False
+                st.rerun()
+
+    if n == 0:
+        st.markdown("""
+        <div class="warn-box">
+        Your list is empty. Search for movies above and start adding them!
+        </div>""", unsafe_allow_html=True)
+    else:
+        # progress toward 5
+        if n < 5:
+            st.markdown(f"""
+            <div class="warn-box">
+            ⚠️ You need at least <b>5 movies</b> to get recommendations.
+            Add <b>{5 - n} more</b> to unlock the Discover page.
+            </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="info-box">
+            ✅ Great! You have {n} movies. Head to <b>✨ Discover Movies</b> to get your recommendations.
+            </div>""", unsafe_allow_html=True)
+
+        # List items with inline rating edit + remove
+        mid_to_title = dict(zip(movies_df["movie_id"], movies_df["title"]))
+        mid_to_genre = dict(zip(movies_df["movie_id"], movies_df["genres"]))
+
+        to_remove = None
+        for mid, rating in list(my_list.items()):
+            title = mid_to_title.get(mid, f"Movie {mid}")
+            genre = mid_to_genre.get(mid, "")[:45]
+            c1, c2, c3 = st.columns([5, 2, 1])
+            with c1:
+                st.markdown(f"""
+                <div style="padding:6px 0">
+                  <div class="movie-item-title">{title}</div>
+                  <div class="movie-item-genre">{genre}</div>
+                </div>""", unsafe_allow_html=True)
+            with c2:
+                new_r = st.select_slider("", options=[1,2,3,4,5], value=rating,
+                                          key=f"edit_{mid}", label_visibility="collapsed",
+                                          format_func=lambda x: "★"*x)
+                if new_r != rating:
+                    st.session_state.my_list[mid] = new_r
+                    st.session_state.show_recs = False
+                    st.rerun()
+            with c3:
+                if st.button("✕", key=f"rm_{mid}", use_container_width=True):
+                    to_remove = mid
+
+        if to_remove is not None:
+            del st.session_state.my_list[to_remove]
+            st.session_state.show_recs = False
+            st.rerun()
+
+    # ── Suggest button ────────────────────────────────────────────────────────
+    st.markdown("---")
+    if n >= 5:
+        if st.button("✨ Suggest Movies Based on My List", type="primary",
+                     use_container_width=True):
+            st.session_state.show_recs = True
+            # Switch to discover page
+            st.switch_page = "✨ Discover Movies"
+            st.info("👉 Head to **✨ Discover Movies** in the sidebar to see your recommendations!")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: DISCOVER
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "✨ Discover Movies":
+    st.markdown("""
+    <div class="app-header">
+      <h1>✨ Discover Movies</h1>
+      <p>Movies the AI thinks you'll love — based on your list and ratings</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    my_list = st.session_state.my_list
+    n       = len(my_list)
+
+    if n == 0:
+        st.markdown("""
+        <div class="warn-box">
+        📋 Your movie list is empty. Go to <b>My Movie List</b> and add some movies first!
+        </div>""", unsafe_allow_html=True)
+        st.stop()
+
+    if n < 5:
+        st.markdown(f"""
+        <div class="warn-box">
+        ⚠️ You only have <b>{n} movie(s)</b> in your list.
+        Please add <b>{5 - n} more</b> in <b>My Movie List</b> to unlock recommendations.
+        </div>""", unsafe_allow_html=True)
+        st.stop()
+
     if model is None:
-        st.error("No trained model found."); st.stop()
+        st.error("Model not available."); st.stop()
 
-    import plotly.express as px
-    import plotly.graph_objects as go
+    # ── Controls ──────────────────────────────────────────────────────────────
+    c1, c2 = st.columns([2, 2])
+    with c1:
+        top_n = st.slider("How many movies to suggest?", 5, 20, 10)
+    with c2:
+        cf_w = st.slider("Preference: Similar users ← → Genre match",
+                         0.0, 1.0, 0.6, 0.1,
+                         help="Left = more weight on users like you · Right = more weight on genre similarity")
 
-    m   = model.get("metrics", {})
-    cfg = model.get("config",  {})
+    model["cf_weight"] = cf_w
 
-    c1,c2,c3,c4 = st.columns(4)
-    c1.metric("RMSE",           f"{m.get('rmse',0):.4f}")
-    c2.metric("MAE",            f"{m.get('mae',0):.4f}")
-    c3.metric("Latent Factors", cfg.get("n_factors","—"))
-    c4.metric("Movies Indexed", len(model.get("movie_ids",[])))
+    # ── Generate button ───────────────────────────────────────────────────────
+    if st.button("🎬 Suggest Movies I'll Love", type="primary", use_container_width=True):
+        st.session_state.show_recs = True
 
-    if ratings_df is not None:
-        st.markdown("### 📈 Rating Distribution")
-        dist = ratings_df["rating"].value_counts().sort_index().reset_index()
-        dist.columns = ["Rating","Count"]
-        fig = px.bar(dist, x="Rating", y="Count", color="Count",
-                     color_continuous_scale="Blues", title="Rating Distribution (1–5)")
-        st.plotly_chart(fig, use_container_width=True)
+    if not st.session_state.show_recs:
+        st.markdown("""
+        <div class="info-box">
+        👆 Click the button above to generate your personalised movie recommendations.
+        </div>""", unsafe_allow_html=True)
+        st.stop()
 
-    st.markdown("### 📐 SVD Explained Variance")
-    svd = model.get("svd")
-    if svd is not None:
-        ev  = svd.explained_variance_ratio_
-        evdf = pd.DataFrame({"Component": range(1, len(ev)+1),
-                             "Variance": ev,
-                             "Cumulative": np.cumsum(ev)})
-        fig2 = px.line(evdf, x="Component", y="Cumulative", markers=False,
-                       title="Cumulative Explained Variance by SVD Component")
-        fig2.add_bar(x=evdf["Component"], y=evdf["Variance"], name="Per component",
-                     marker_color="lightblue")
-        st.plotly_chart(fig2, use_container_width=True)
+    # ── Compute & show ────────────────────────────────────────────────────────
+    with st.spinner("🔍 Analysing your taste profile..."):
+        recs = get_recommendations(model, my_list, movies_df, top_n)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: SIMILARITY MAPS
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "🗺️ Similarity Maps":
-    st.markdown("## 🗺️ Movie Similarity Visualizations")
-    if model is None or movies_df is None:
-        st.error("Model or data not available."); st.stop()
+    if recs.empty:
+        st.warning("No recommendations found. Try adding more diverse movies to your list.")
+        st.stop()
 
-    import plotly.graph_objects as go
+    # Your list summary
+    mid_to_title = dict(zip(movies_df["movie_id"], movies_df["title"]))
+    liked = sorted(my_list.items(), key=lambda x: x[1], reverse=True)
+    pills = " ".join([
+        f"<span class='stat-pill'>{'★'*r} {mid_to_title.get(m,'?')[:22]}</span>"
+        for m, r in liked
+    ])
+    st.markdown(f"**Based on your {n} movies:** {pills}", unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown(f"### 🎯 Top {len(recs)} Recommendations for You")
 
-    tab1, tab2, tab3 = st.tabs(["🔥 Similarity Heatmap","🌐 Genre Co-occurrence","📉 User–Movie Matrix"])
+    for rank, (_, row) in enumerate(recs.iterrows(), 1):
+        pct   = int(row["match_pct"])
+        title = row["title"]
+        genre = str(row.get("genres",""))[:50]
+        year  = str(row.get("year",""))
 
-    with tab1:
-        st.markdown("### Content-Based Cosine Similarity Heatmap")
-        n     = st.slider("Movies to display", 10, 50, 20)
-        cb    = model["cb_matrix"]
-        cbids = model["cb_movie_ids"]
-        ids   = cbids[:n]
-        mat   = cb[:n, :n]
-        idt   = dict(zip(movies_df["movie_id"], movies_df["title"]))
-        lbls  = [idt.get(m, str(m))[:25] for m in ids]
-        fig   = go.Figure(go.Heatmap(z=mat, x=lbls, y=lbls,
-                    colorscale="Blues", zmin=0, zmax=1,
-                    hovertemplate="<b>%{y}</b> ↔ <b>%{x}</b><br>Sim: %{z:.3f}<extra></extra>"))
-        fig.update_layout(height=600, xaxis_tickangle=-45,
-                          title="Content-Based Cosine Similarity")
-        st.plotly_chart(fig, use_container_width=True)
+        # colour gradient: green for high, amber for mid
+        bar_color = ("#1a8a4a" if pct >= 80
+                     else "#4a90d9" if pct >= 65
+                     else "#e07b00")
 
-    with tab2:
-        st.markdown("### Genre Co-occurrence Heatmap")
-        gl    = GENRES[1:]
-        comat = np.zeros((len(gl), len(gl)))
-        for g in movies_df["genres"]:
-            ps = [p for p in str(g).split("|") if p in gl]
-            for i, a in enumerate(ps):
-                for b in ps[i:]:
-                    ia,ib = gl.index(a), gl.index(b)
-                    comat[ia][ib] += 1
-                    if ia != ib: comat[ib][ia] += 1
-        fig2 = go.Figure(go.Heatmap(z=comat, x=gl, y=gl, colorscale="Teal",
-                    hovertemplate="<b>%{y}</b>+<b>%{x}</b>: %{z:.0f}<extra></extra>"))
-        fig2.update_layout(height=550, xaxis_tickangle=-45,
-                           title="Genre Co-occurrence Matrix")
-        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown(f"""
+        <div class="rec-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div class="rec-title">#{rank} &nbsp; {title}
+                <span style="font-weight:400;font-size:.82rem;color:#999"> {year}</span>
+              </div>
+              <div class="rec-genre">{genre}</div>
+            </div>
+            <div style="text-align:right;min-width:60px">
+              <div style="font-size:1.4rem;font-weight:800;color:{bar_color}">{pct}%</div>
+              <div style="font-size:.72rem;color:#aaa">match</div>
+            </div>
+          </div>
+          <div class="pct-bar-bg">
+            <div class="pct-bar-fill" style="width:{pct}%;background:{bar_color}"></div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with tab3:
-        st.markdown("### User–Movie Ratings Sparsity (sample)")
-        if ratings_df is not None:
-            su = sorted(ratings_df["user_id"].unique())[:40]
-            sm = sorted(ratings_df["movie_id"].unique())[:60]
-            pv = (ratings_df[ratings_df["user_id"].isin(su) &
-                             ratings_df["movie_id"].isin(sm)]
-                  .pivot(index="user_id", columns="movie_id", values="rating")
-                  .fillna(0))
-            mt = dict(zip(movies_df["movie_id"], movies_df["title"]))
-            pv.columns = [mt.get(c, str(c))[:18] for c in pv.columns]
-            fig3 = go.Figure(go.Heatmap(
-                z=pv.values, x=list(pv.columns),
-                y=[f"User {u}" for u in pv.index],
-                colorscale="YlOrRd", zmin=0, zmax=5,
-                hovertemplate="<b>%{y}</b>→<b>%{x}</b> Rating:%{z}<extra></extra>"))
-            fig3.update_layout(height=600, xaxis_tickangle=-45,
-                               title="User × Movie Ratings (sample)")
-            st.plotly_chart(fig3, use_container_width=True)
-            sp = 1-(len(ratings_df)/(ratings_df["user_id"].nunique()*ratings_df["movie_id"].nunique()))
-            st.metric("Matrix Sparsity", f"{sp:.1%}")
+    st.markdown("---")
+    st.caption("💡 Tip: Update your list anytime in **My Movie List** — your recommendations will refresh automatically.")
